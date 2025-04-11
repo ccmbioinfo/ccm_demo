@@ -68,7 +68,7 @@ class Structure:
         rotation_file=os.path.abspath(destination+".rot")
         return aligned_pdb, rotation_file
 
-    def predict():
+    def predict(self, sequence):
     """
     """
     # Structure Details - Change these for non-demo purposes
