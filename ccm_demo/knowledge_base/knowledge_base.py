@@ -14,10 +14,25 @@ class KnowledgeBase:
         self.db_tables = self.meta.tables
 
     def add_paper(self, paper):
-        pass
+        new_paper = Papers(
+            source_id = paper.id,
+            source = paper.source,
+            title = paper.title,
+            abstract = paper.abstract,
+            pdf_url = paper.download_link,
+            text = paper.text,
+            figures = paper.figures,
+            tables = paper.tables
+        )
+        self.session.add(new_paper)
+        self.session.commit()
 
-    def remove_paper(self, paper_id):
-        pass
+    def remove_paper(self, source_id):
+        paper_to_delete = session.query(Papers).filter_by(source_id).one_or_none
+        if paper_to_delete:
+            session.delete(paper_to_delete)
+        else:
+            pass
 
     def query(self, **kwargs):
         pass
