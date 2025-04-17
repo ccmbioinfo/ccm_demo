@@ -1,5 +1,6 @@
-#TODO openmm
+#TODO import
 
+#TODO need to specify localcolabfold directory in the container bind mounts
 class Simulation:
     def __init__(self, protein):
         self.protein = protein
@@ -7,7 +8,8 @@ class Simulation:
     def cleanup(self):
         pass
 
-    def simulate(self, use_bioemu=True):
+    #TODO openmm with a warning
+    def simulate(self, use_bioemu=True, relax=False):
         pass
 
     def save(self):

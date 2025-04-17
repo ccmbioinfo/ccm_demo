@@ -1,14 +1,12 @@
 import os
+import shutil
 import subprocess
 import warnings
 
 import torch
 from Bio import Seq, SeqIO
-from esm.models.esmc import ESMC
-from esm.sdk.api import ESMProtein, LogitsConfig
 
 from ccm_demo.sequence.utils import *
-
 
 class Sequence:
     def __init__(self, name, sequence):
@@ -16,56 +14,55 @@ class Sequence:
         self.sequence = sequence
         self.device="cuda" if torch.cuda.is_available() else "cpu"
 
-    def embeddings(self, model="esmc_300", normalize=False):
-        if model not in ["esmc_300", "esmc_600"]:
-            raise ValueError("Invalid model name")
-        protein=ESMProtein(self.sequence)
-        client = ESMC.from_pretrained(model).to(self.device)  # or "cpu"
-        protein_tensor = client.encode(protein)
-        logits_output = client.logits(
-            protein_tensor, LogitsConfig(sequence=True, return_embeddings=True)
-        )
-        if normalize:
-            logits_output=logits_output[0].mean(dim=0)
-        return logits_output
 
-    def mutate(self, position, to, inplace=False, new_name=name):
+    def embeddings(self, model="esmc_300m", normalize=False):
+        if model == "esmc_300m" or model == "esmc_g00m":
+            embeddings=esm3_embeddings(sequence=self.sequence, model=model,
+                                       normalize=normalize, device=self.device)
+        else:
+            raise NotImplementedError("That model is not implemented.")
+        return embeddings
+
+
+    def mutate(self, position, to, new_name=None):
         """
         position is 0 based
         """
-        new_sequence = self.sequence
+        new_sequence = list(self.sequence)
+        if position > len(new_sequence)-1:
+            raise ValueError("Position is greater than the sequence length {}".format(len(new_sequence)))
         new_sequence[position] = to
 
-        if not inplace:
-            new_instance = Sequence(new_name, new_sequence, self.sequence)
-            return new_instance
-        else:
-            self.sequence = new_sequence
+        self.sequence = "".join(new_sequence)
+        if new_name is not None:
             self.name = new_name
-            return self
+        return self
 
-    def msa(self, database, destination):
-        if not os.path.exists(database):
-            raise FileNotFoundError("There is no such database: {}".format(database))
-
-        self.write(os.path.join(os.getcwd(), "query.fasta"))
-
-        run=subprocess.run(["run_mmseqs.sh" " -i", str(os.path.join(os.getcwd(), "query.fasta")),
-                            "-d", database, "-o", destination, "-c"])
+    def msa(self, database, destination, output_name="msa.a3m", cleanup=True):
+        self.write(os.path.join(destination, "query.fasta"))
+        script=os.path.join(__file__.replace("sequence.py", ""), "../scripts/run_mmseqs.sh")
+        #TODO better packaging
+        command=" ".join(["bash", script, " -i", str(os.path.abspath(os.path.join(destination, "query.fasta"))),
+                            "-d", database, "-o", str(os.path.join(destination, output_name)),
+                            "-c"])
+        run=subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if run.returncode != 0:
-            warnings.warn("There was an error with mmseqs run see error below '\n' {}".format(run.stderr))
+            raise ChildProcessError("There was an error with mmseqs run see error below '\n' {}".format(run.stderr))
         else:
-            print("mmseqs run complese the results are in {}".format(destination))
+            print("mmseqs run complete the results are in {}/{}".format(destination, output_name))
 
-    #TODO Biotite
-    def align(self, other):
-        pass
+        if cleanup:
+            items=["query.fasta", "query.index", "query.dbtype", "query.source", "query.lookup", "query",
+                   "query.tab", "query_h", "query_h.dbtype", "query_h.index", "align", "align.dbtype","align.index"]
+            for item in items:
+                os.remove(os.path.join(destination, item))
 
-    def write(self, path):
-        seq=SeqIO.SeqRecord(Seq(self.sequence), id=self.name, description="")
-        with open(path, "w") as handle:
+
+    def write(self, fpath):
+        seq=SeqIO.SeqRecord(Seq.Seq(self.sequence), id=self.name, description="")
+        with open(fpath, "w") as handle:
             SeqIO.write(seq, handle, "fasta")
 
     def __str__(self):
-        print("Sequence with name {} and {} aas".format(self.name, len(self.sequence)))
+        return "Sequence with name {} and {} aas".format(self.name, len(self.sequence))
 

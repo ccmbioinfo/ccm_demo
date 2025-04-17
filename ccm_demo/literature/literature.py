@@ -1,22 +1,23 @@
 from bs4 import BeautifulSoup as bs
 import requests
+import tarfile
+
+from ccm_demo.literature.utils import *
 
 class NoPapersError(Exception):
     pass
 
-class Literature:
-    def __init__(self, pubmed_url, arxiv_url, pubmed_api_key):
+class LitSearch:
+    def __init__(self, pubmed_api_key=None):
         """
         create the ncessary framework for searching
         :param pubmed_url:
         :param arxiv_url:
         :param pubmed_api_key:
         """
-        self.pubmed_url = pubmed_url
-        self.arxiv_url = arxiv_url
         self.pubmed_key = pubmed_api_key
 
-    #TODO advanced seaerch
+    #TODO advanced search
     def search(self, query, database="pubmed", results="id", max_results=1000):
         """
         search pubmed and arxiv for a query, this is just keyword search no other params are implemented at the moment
@@ -43,9 +44,9 @@ class Literature:
                     response.raise_for_status()
                     soup = bs(response.text, "xml")
                     dois.append([item.text for item in soup.find_all("ArticleId") if item.attrs["IdType"] == "doi"])
-                return dois
+                to_ret=dois
             else:
-                return ids
+                to_ret=ids
 
         elif database == "arxiv":
             search_url="http://export.arxiv.org/api/search_query?{}&max_results={}".format(query, str(max_results))
@@ -53,8 +54,8 @@ class Literature:
             search_response.raise_for_status()
             soup = bs(search_response.text, "xml")
             ids=[item.text.split("/").pop() for item in soup.find_all("id")][1:] #first one is the search id
-            return ids
-
+            to_ret= ids
+        return to_ret
 
 class Paper:
     def __init__(self, id):
@@ -64,7 +65,6 @@ class Paper:
         self.text = None
         self.figures = None
         self.tables = None
-        self.references = None
 
     def get_meta(self, source):
         if source =="pubmed":
@@ -112,28 +112,13 @@ class Paper:
                 f.write(download.content)
 
     def process(self, pdf):
-        # TODO extract text
-        # extract tables, figures
-        # extract references?
-        # find references to figuers and tables
-        # this will need to be done either using a VL model or layourparser
-        pass
+        text, figures, captions= process_pdf(pdf)
+        text=[cleanup_text(item) for item in text]
+        self.text=text
+        self.figures=figures
 
 
-#TODO this will need a place to store stuff
-class KnowledgeBase:
-    def __init__(self, name, papers):
-        self.name = name
-        self.papers = papers
-        self.text_embedding_model=None
-        self.image_embedding_model=None
 
-
-    def build(self, format="pkl"):
-        pass
-
-    def RAG(self):
-        pass
 
 
 

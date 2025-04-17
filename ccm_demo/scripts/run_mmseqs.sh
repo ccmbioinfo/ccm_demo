@@ -1,4 +1,4 @@
-#/bin/bash
+#! /bin/bash
 
 set -oe pipefail
 
@@ -21,8 +21,5 @@ $MMSEQS align query $database search align -a -v 0
 $MMSEQS convertalis query $database align query.tab --format-output target,qlen,qstart,qend,tstart,tend,tseq,cigar,taln -v 0
 python $SCRIPT_DIR/process_mmseqs.py -i query.tab -o $output
 
-if [[ $cleanup == 'true' ]]; then
-  rm -r $input query* query.tab tmp* search*
-fi
 
 
