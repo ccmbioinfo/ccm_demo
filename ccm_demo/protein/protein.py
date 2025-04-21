@@ -97,7 +97,7 @@ class ProteinNetwork:
 
         self.species = species
         self.string_id, self.common_name = self.get_identifiers(name)
-        self.interactions = self.get_interactions(common_name)
+        # self.interactions = self.get_interactions(common_name) # Called later, may remove from init 
        
 
     def get_identifiers(self, name):
@@ -115,29 +115,47 @@ class ProteinNetwork:
         response = requests.get(f"https://string-db.org/api/json/network?identifiers={self.common_name}&species={self.species}")
         response.raise_for_status()
 
-        content = response.content.decode().strip()
-        content = json.loads(content)
+        interactions= response.content.decode().strip()
+        interactions = json.loads(interactions)
 
-        # len(content) = number_of_interactors
+        number_of_interactions = len(interactions)
 
-        # for item in content: 
-        #     string_id_A = item["stringId_A"]
-        #     string_id_B = item["stringId_B"] 
-        #     common_name_A = item["preferredName_A"]
-        #     common_name_B = item["preferredName_B"]
-        #     score = item["score"]
-        #     nscore = item["nscore"]
-        #     fscore = item["fscore"]
-        #     pscore = item["pscore"]
-        #     ascore = item["ascore"]
-        #     escore = item["escore"]
-        #     dscore = item["dscore"]
-        #     tscore = item["tscore"]
+
+        for item in interactions: 
+            string_id_A = item["stringId_A"]
+            string_id_B = item["stringId_B"] 
+            common_name_A = item["preferredName_A"]
+            common_name_B = item["preferredName_B"]
+            score = item["score"]
+            nscore = item["nscore"]
+            fscore = item["fscore"]
+            pscore = item["pscore"]
+            ascore = item["ascore"]
+            escore = item["escore"]
+            dscore = item["dscore"]
+            tscore = item["tscore"]
         
-        return content
-
+        return interactions
         
-    def get_network(self):
+    def get_network(self, common_name, depth=1, visited_nodes=None):
+        if visited_nodes is None:
+            visited_nodes = set()
+        
+        if common_name in visited_nodes or depth < 1:
+            return {}
+        
+        visited_nodes.add(common_name)
+        interactions = self.get_interactions(common_name)
+        results = {common_name: interactions}
+
+        for interaction in interactions: 
+            a = interaction["preferredName_A"]
+            b = interaction["preferredName_B"]
+            for partner in (a, b):
+                if partner not in visited_nodes:
+                    results.update(self.get_network(partner, depth-1, visited_nodes))
+        
+        return results
 
 
 
