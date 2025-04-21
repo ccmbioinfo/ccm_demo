@@ -2,7 +2,6 @@ import requests
 import json
 import os
 
-
 class Protein:
     def __init__(self, uniprot_id):
         self.uniprot_id = uniprot_id
@@ -90,3 +89,60 @@ class Protein:
 
     def __repr__(self):
         return "Protein instance with name {} and {} aa long".format(self.name, len(self.sequence))
+
+class ProteinNetwork:
+    def __init__(self, name, species=9606): 
+        # name parameter supports use of uniprot id, uniprot accession #, gene name, or gene name synonyms
+        # default organism is homo sapiens 
+
+        self.species = species
+        self.string_id, self.common_name = self.get_identifiers(name)
+        self.interactions = self.get_interactions(common_name)
+       
+
+    def get_identifiers(self, name):
+        response = requests.get(f"https://string-db.org/api/json/get_string_ids?identifiers={self.name}&species={self.species}")
+        response.raise_for_status()
+
+        content = response.content.decode().strip()
+        content = json.loads(content)
+
+        string_id = content[0]["stringId"]
+        common_name = content[0]["preferredName"]
+        return string_id, common_name
+    
+    def get_interactions(self, common_name): 
+        response = requests.get(f"https://string-db.org/api/json/network?identifiers={self.common_name}&species={self.species}")
+        response.raise_for_status()
+
+        content = response.content.decode().strip()
+        content = json.loads(content)
+
+        # len(content) = number_of_interactors
+
+        # for item in content: 
+        #     string_id_A = item["stringId_A"]
+        #     string_id_B = item["stringId_B"] 
+        #     common_name_A = item["preferredName_A"]
+        #     common_name_B = item["preferredName_B"]
+        #     score = item["score"]
+        #     nscore = item["nscore"]
+        #     fscore = item["fscore"]
+        #     pscore = item["pscore"]
+        #     ascore = item["ascore"]
+        #     escore = item["escore"]
+        #     dscore = item["dscore"]
+        #     tscore = item["tscore"]
+        
+        return content
+
+        
+    def get_network(self):
+
+
+
+
+        
+       
+
+        
